@@ -1,5 +1,8 @@
 # capitalism-cli
 
+<img width="532" height="269" alt="image" src="https://github.com/user-attachments/assets/e50bfde6-f33c-4ed7-b9f4-251cf7761c80" />
+
+
 To install dependencies:
 
 ```bash
