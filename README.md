@@ -1,5 +1,6 @@
 # Capitalism CLI
 
+<<<<<<< HEAD
 A terminal-based trading game where you buy low, sell high, and build an empire.
 
 ```
@@ -10,6 +11,13 @@ A terminal-based trading game where you buy low, sell high, and build an empire.
 ```
 
 ## Quick Start
+=======
+<img width="527" height="466" alt="image" src="https://github.com/user-attachments/assets/c4eb295f-a9eb-430d-9171-df8c76c06b15" />
+
+
+
+To install dependencies:
+>>>>>>> 6b11e06342d7dfc9b32752e2739a8367d4701d5e
 
 ```bash
 bun install
