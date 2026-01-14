@@ -1,6 +1,7 @@
 # capitalism-cli
 
-<img width="532" height="269" alt="image" src="https://github.com/user-attachments/assets/e50bfde6-f33c-4ed7-b9f4-251cf7761c80" />
+<img width="527" height="466" alt="image" src="https://github.com/user-attachments/assets/c4eb295f-a9eb-430d-9171-df8c76c06b15" />
+
 
 
 To install dependencies:
