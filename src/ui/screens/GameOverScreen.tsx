@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import SelectInput from 'ink-select-input';
+import { Select } from '../components/Select.tsx';
 import { useGameStore } from '../../store/gameStore.ts';
 import { getVehicle } from '../../data/vehicles.ts';
 import { getSellPrice } from '../../systems/MarketSystem.ts';
@@ -11,13 +11,15 @@ interface GameOverScreenProps {
 }
 
 export const GameOverScreen: React.FC<GameOverScreenProps> = ({ onNewGame, onQuit }) => {
-  const { money, cargo, vehicle, totalProfit, tradesCompleted, location, day } = useGameStore();
+  const { money, cargo, vehicle, totalProfit, tradesCompleted, location, getMarketContext } =
+    useGameStore();
 
   const vehicleData = getVehicle(vehicle);
   const vehicleValue = Math.round((vehicleData?.cost ?? 0) * 0.5);
 
+  const context = getMarketContext();
   const cargoValue = cargo.reduce((sum, item) => {
-    const sellPrice = getSellPrice(item.commodityId, location, day);
+    const sellPrice = getSellPrice(item.commodityId, location, context);
     return sum + sellPrice * item.quantity;
   }, 0);
 
@@ -133,7 +135,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ onNewGame, onQui
         </Box>
       </Box>
 
-      <SelectInput items={items} onSelect={handleSelect} />
+      <Select items={items} onSelect={handleSelect} />
     </Box>
   );
 };

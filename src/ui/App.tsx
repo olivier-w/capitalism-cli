@@ -10,11 +10,16 @@ interface AppProps {
 }
 
 export const App: React.FC<AppProps> = ({ onExit }) => {
-  const { gameStarted, gameOver, startGame, resetGame } = useGameStore();
+  const { gameStarted, gameOver, startGame, resetGame, loadGame, deleteSave } = useGameStore();
 
   const handleNewGame = () => {
+    deleteSave();
     resetGame();
     startGame();
+  };
+
+  const handleContinue = () => {
+    loadGame();
   };
 
   const handleQuit = () => {
@@ -34,7 +39,7 @@ export const App: React.FC<AppProps> = ({ onExit }) => {
   if (!gameStarted) {
     return (
       <Box flexDirection="column">
-        <MainMenu onNewGame={handleNewGame} onQuit={handleQuit} />
+        <MainMenu onNewGame={handleNewGame} onContinue={handleContinue} onQuit={handleQuit} />
       </Box>
     );
   }

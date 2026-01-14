@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import SelectInput from 'ink-select-input';
+import { Select } from '../components/Select.tsx';
 import { useGameStore } from '../../store/gameStore.ts';
 import { getVehicle, vehicles } from '../../data/vehicles.ts';
 import { commodities } from '../../data/commodities.ts';
@@ -12,14 +12,15 @@ interface StatsScreenProps {
 }
 
 export const StatsScreen: React.FC<StatsScreenProps> = ({ onBack }) => {
-  const { money, day, maxDays, vehicle, cargo, totalProfit, tradesCompleted, location } =
+  const { money, day, maxDays, vehicle, cargo, totalProfit, tradesCompleted, location, getMarketContext } =
     useGameStore();
 
   const vehicleData = getVehicle(vehicle);
+  const context = getMarketContext();
 
   // Calculate cargo value at current location
   const cargoValue = cargo.reduce((sum, item) => {
-    const sellPrice = getSellPrice(item.commodityId, location, day);
+    const sellPrice = getSellPrice(item.commodityId, location, context);
     return sum + sellPrice * item.quantity;
   }, 0);
 
@@ -106,7 +107,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onBack }) => {
           <Text bold>Cargo Manifest:</Text>
           {cargo.map((item) => {
             const commodity = commodities.find((c) => c.id === item.commodityId);
-            const currentSellPrice = getSellPrice(item.commodityId, location, day);
+            const currentSellPrice = getSellPrice(item.commodityId, location, context);
             const potentialProfit = (currentSellPrice - item.purchasePrice) * item.quantity;
             return (
               <Box key={item.commodityId}>
@@ -125,7 +126,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ onBack }) => {
         </Box>
       )}
 
-      <SelectInput items={items} onSelect={() => onBack()} />
+      <Select items={items} onSelect={() => onBack()} />
     </Box>
   );
 };

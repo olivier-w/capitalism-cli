@@ -1,5 +1,9 @@
-import { commodities, type Commodity } from '../data/commodities.ts';
-import { getLocation, type Location } from '../data/locations.ts';
+import { commodities, getCommoditiesForRegions, type Commodity } from '../data/commodities.ts';
+import { getLocation, type Location, type RegionId } from '../data/locations.ts';
+import { getEvent, type MarketEvent } from '../data/events.ts';
+import type { ActiveEvent, WeeklyStatus } from '../game/GameState.ts';
+import { getSaturationMultiplier } from './MarketSaturation.ts';
+import { getHotColdMultiplier } from './HotColdSystem.ts';
 
 export interface MarketPrice {
   commodityId: string;
@@ -8,54 +12,104 @@ export interface MarketPrice {
   sellPrice: number;
   trend: 'cheap' | 'expensive' | 'normal';
   unit: string;
+  isHot: boolean;
+  isCold: boolean;
+  eventAffected: boolean;
+  saturationLevel: 'flooded' | 'oversupplied' | 'normal' | 'scarce' | 'shortage';
 }
 
-// Seeded random for reproducible prices per day
-const seededRandom = (seed: number): number => {
-  const x = Math.sin(seed * 9999) * 10000;
-  return x - Math.floor(x);
+export interface MarketContext {
+  day: number;
+  activeEvents: ActiveEvent[];
+  marketSaturation: Record<string, number>;
+  weeklyStatus: WeeklyStatus;
+  unlockedRegions: RegionId[];
+}
+
+const getEventMultiplier = (
+  commodity: Commodity,
+  location: Location,
+  activeEvents: ActiveEvent[]
+): { multiplier: number; affected: boolean } => {
+  let multiplier = 1;
+  let affected = false;
+
+  for (const active of activeEvents) {
+    const event = getEvent(active.eventId);
+    if (!event) continue;
+
+    // Check if event applies to this location
+    let applies = false;
+    if (event.scope === 'global') {
+      applies = true;
+    } else if (event.scope === 'region' && active.affectedRegionId === location.region) {
+      applies = true;
+    } else if (event.scope === 'location' && active.affectedLocationId === location.id) {
+      applies = true;
+    }
+
+    if (applies) {
+      const effect = event.commodityEffects.find((e) => e.commodityId === commodity.id);
+      if (effect) {
+        multiplier *= effect.priceMultiplier;
+        affected = true;
+      }
+    }
+  }
+
+  return { multiplier, affected };
 };
 
 export const calculatePrice = (
   commodity: Commodity,
   location: Location,
-  day: number
-): number => {
+  context: MarketContext
+): { price: number; eventAffected: boolean } => {
   let price = commodity.basePrice;
 
-  // Location modifier: cheap where produced, expensive where needed
+  // 1. Location modifier: cheap where produced, expensive where needed
   if (location.produces.includes(commodity.id)) {
     price *= 0.6; // 40% cheaper
   } else if (location.needs.includes(commodity.id)) {
     price *= 1.5; // 50% more expensive
   }
 
-  // Weekly cycle (learnable pattern)
-  const weekDay = day % 7;
-  if (commodity.id === 'electronics' && weekDay === 0) {
-    price *= 1.2; // Electronics spike on "Sundays"
-  }
-  if (commodity.id === 'coffee' && (weekDay === 1 || weekDay === 2)) {
-    price *= 0.9; // Coffee dips early week
-  }
+  // 2. Hot/Cold commodity modifier
+  price *= getHotColdMultiplier(commodity.id, context.weeklyStatus);
 
-  // Daily variance using seeded random (+/- 15%)
-  const seed = day * 1000 + commodity.id.charCodeAt(0) * 100 + location.id.charCodeAt(0);
-  const variance = (seededRandom(seed) - 0.5) * 0.3; // -15% to +15%
+  // 3. Active events modifier
+  const { multiplier: eventMultiplier, affected: eventAffected } = getEventMultiplier(
+    commodity,
+    location,
+    context.activeEvents
+  );
+  price *= eventMultiplier;
+
+  // 4. Market saturation effect
+  price *= getSaturationMultiplier(context.marketSaturation, location.id, commodity.id);
+
+  // 5. Daily variance - TRUE RANDOM (not seeded!)
+  const variance = (Math.random() - 0.5) * 0.2; // -10% to +10%
   price *= 1 + variance;
 
   // Clamp to min/max
   price = Math.max(commodity.minPrice, Math.min(commodity.maxPrice, price));
 
-  return Math.round(price);
+  return { price: Math.round(price), eventAffected };
 };
 
-export const getMarketPrices = (locationId: string, day: number): MarketPrice[] => {
+export const getMarketPrices = (
+  locationId: string,
+  context: MarketContext
+): MarketPrice[] => {
   const location = getLocation(locationId);
   if (!location) return [];
 
-  return commodities.map((commodity) => {
-    const buyPrice = calculatePrice(commodity, location, day);
+  // Only show commodities available in unlocked regions
+  const availableCommodities = getCommoditiesForRegions(context.unlockedRegions);
+
+  return availableCommodities.map((commodity) => {
+    const { price: buyPrice, eventAffected } = calculatePrice(commodity, location, context);
     const sellPrice = Math.round(buyPrice * 0.85); // 15% spread
 
     let trend: 'cheap' | 'expensive' | 'normal' = 'normal';
@@ -65,6 +119,18 @@ export const getMarketPrices = (locationId: string, day: number): MarketPrice[] 
       trend = 'expensive';
     }
 
+    const isHot = commodity.id === context.weeklyStatus.hotCommodity;
+    const isCold = commodity.id === context.weeklyStatus.coldCommodity;
+
+    // Get saturation level
+    const satKey = `${locationId}:${commodity.id}`;
+    const satAmount = context.marketSaturation[satKey] ?? 0;
+    let saturationLevel: MarketPrice['saturationLevel'] = 'normal';
+    if (satAmount > 30) saturationLevel = 'flooded';
+    else if (satAmount > 10) saturationLevel = 'oversupplied';
+    else if (satAmount < -30) saturationLevel = 'shortage';
+    else if (satAmount < -10) saturationLevel = 'scarce';
+
     return {
       commodityId: commodity.id,
       name: commodity.name,
@@ -72,16 +138,28 @@ export const getMarketPrices = (locationId: string, day: number): MarketPrice[] 
       sellPrice,
       trend,
       unit: commodity.unit,
+      isHot,
+      isCold,
+      eventAffected,
+      saturationLevel,
     };
   });
 };
 
-export const getBuyPrice = (commodityId: string, locationId: string, day: number): number => {
-  const prices = getMarketPrices(locationId, day);
+export const getBuyPrice = (
+  commodityId: string,
+  locationId: string,
+  context: MarketContext
+): number => {
+  const prices = getMarketPrices(locationId, context);
   return prices.find((p) => p.commodityId === commodityId)?.buyPrice ?? 0;
 };
 
-export const getSellPrice = (commodityId: string, locationId: string, day: number): number => {
-  const prices = getMarketPrices(locationId, day);
+export const getSellPrice = (
+  commodityId: string,
+  locationId: string,
+  context: MarketContext
+): number => {
+  const prices = getMarketPrices(locationId, context);
   return prices.find((p) => p.commodityId === commodityId)?.sellPrice ?? 0;
 };

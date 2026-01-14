@@ -1,7 +1,30 @@
+import type { RegionId } from '../data/locations.ts';
+
 export interface CargoItem {
   commodityId: string;
   quantity: number;
-  purchasePrice: number; // Track what we paid for profit calculations
+  purchasePrice: number;
+}
+
+export interface ActiveEvent {
+  eventId: string;
+  startDay: number;
+  endDay: number;
+  affectedLocationId?: string;
+  affectedRegionId?: RegionId;
+}
+
+export interface EventLogEntry {
+  day: number;
+  eventName: string;
+  description: string;
+  isStarting: boolean;
+}
+
+export interface WeeklyStatus {
+  hotCommodity: string | null;
+  coldCommodity: string | null;
+  week: number;
 }
 
 export interface GameState {
@@ -22,6 +45,15 @@ export interface GameState {
   // Game flow
   gameStarted: boolean;
   gameOver: boolean;
+
+  // Region system
+  unlockedRegions: RegionId[];
+
+  // Dynamic market
+  marketSaturation: Record<string, number>; // "locationId:commodityId" -> saturation amount
+  activeEvents: ActiveEvent[];
+  eventLog: EventLogEntry[];
+  weeklyStatus: WeeklyStatus;
 }
 
 export const INITIAL_STATE: GameState = {
@@ -39,6 +71,15 @@ export const INITIAL_STATE: GameState = {
 
   gameStarted: false,
   gameOver: false,
+
+  // Start with only starter region unlocked
+  unlockedRegions: ['starter'],
+
+  // Dynamic market starts empty
+  marketSaturation: {},
+  activeEvents: [],
+  eventLog: [],
+  weeklyStatus: { hotCommodity: null, coldCommodity: null, week: 0 },
 };
 
 export const getCargoQuantity = (cargo: CargoItem[], commodityId: string): number => {

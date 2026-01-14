@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import SelectInput from 'ink-select-input';
+import { Select } from '../components/Select.tsx';
 import { useGameStore } from '../../store/gameStore.ts';
 import { vehicles, getVehicle } from '../../data/vehicles.ts';
 import { Header } from '../components/Header.tsx';
@@ -86,7 +86,7 @@ export const UpgradeScreen: React.FC<UpgradeScreenProps> = ({ onBack, onMessage 
         <Text>Your funds: ${money.toLocaleString()}</Text>
       </Box>
 
-      <SelectInput items={items} onSelect={handleSelect} />
+      <Select items={items} onSelect={handleSelect} />
     </Box>
   );
 };

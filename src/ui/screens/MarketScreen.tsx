@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
-import SelectInput from 'ink-select-input';
+import { Select } from '../components/Select.tsx';
 import { useGameStore } from '../../store/gameStore.ts';
 import { getMarketPrices } from '../../systems/MarketSystem.ts';
 import { Header } from '../components/Header.tsx';
@@ -22,9 +22,11 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'info' | 'success' | 'error'>('info');
 
-  const { location, day, money, cargo, buy, sell, getCargoCapacity, getCargoUsed } = useGameStore();
+  const { location, money, cargo, buy, sell, getCargoCapacity, getCargoUsed, getMarketContext } =
+    useGameStore();
 
-  const prices = getMarketPrices(location, day);
+  const context = getMarketContext();
+  const prices = getMarketPrices(location, context);
   const cargoCapacity = getCargoCapacity();
   const cargoUsed = getCargoUsed();
 
@@ -33,9 +35,7 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
       if (key.return) {
         const qty = parseInt(quantity) || 0;
         if (qty > 0) {
-          const result = isBuying
-            ? buy(selectedCommodity, qty)
-            : sell(selectedCommodity, qty);
+          const result = isBuying ? buy(selectedCommodity, qty) : sell(selectedCommodity, qty);
 
           setMessage(result.message);
           setMessageType(result.success ? 'success' : 'error');
@@ -45,7 +45,7 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
             setQuantity('1');
           }
         }
-      } else if (key.escape || key.backspace && quantity === '') {
+      } else if ((key.escape || key.backspace) && quantity === '') {
         setMode(isBuying ? 'buy' : 'sell');
         setQuantity('1');
       } else if (key.backspace) {
@@ -82,10 +82,19 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
   const commodityItems = prices.map((p) => {
     const owned = getCargoQuantity(cargo, p.commodityId);
     const price = isBuying ? p.buyPrice : p.sellPrice;
-    const trendIndicator = p.trend === 'cheap' ? ' [LOW]' : p.trend === 'expensive' ? ' [HIGH]' : '';
+
+    // Build indicator string
+    const indicators: string[] = [];
+    if (p.isHot) indicators.push('HOT');
+    if (p.isCold) indicators.push('COLD');
+    if (p.eventAffected) indicators.push('EVENT');
+    if (p.trend === 'cheap') indicators.push('LOW');
+    if (p.trend === 'expensive') indicators.push('HIGH');
+
+    const indicatorStr = indicators.length > 0 ? ` [${indicators.join(' ')}]` : '';
 
     return {
-      label: `${p.name}: $${price}${trendIndicator} (You have: ${owned})`,
+      label: `${p.name}: $${price}${indicatorStr} (You have: ${owned})`,
       value: p.commodityId,
     };
   });
@@ -113,15 +122,38 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
         <Box width={10}>
           <Text bold>Sell</Text>
         </Box>
-        <Box width={10}>
+        <Box width={8}>
           <Text bold>Owned</Text>
         </Box>
-        <Box width={12}>
-          <Text bold>Trend</Text>
+        <Box width={18}>
+          <Text bold>Status</Text>
         </Box>
       </Box>
       {prices.map((p) => {
         const owned = getCargoQuantity(cargo, p.commodityId);
+
+        // Build status indicators
+        const statuses: string[] = [];
+        if (p.isHot) statuses.push('HOT');
+        if (p.isCold) statuses.push('COLD');
+        if (p.eventAffected) statuses.push('!');
+        if (p.trend === 'cheap') statuses.push('LOW');
+        else if (p.trend === 'expensive') statuses.push('HIGH');
+        if (p.saturationLevel === 'flooded') statuses.push('FLOOD');
+        else if (p.saturationLevel === 'oversupplied') statuses.push('OVER');
+        else if (p.saturationLevel === 'scarce') statuses.push('SCARCE');
+        else if (p.saturationLevel === 'shortage') statuses.push('SHORT');
+
+        const statusStr = statuses.join(' ');
+
+        // Color for status (use bright colors for readability)
+        let statusColor = 'white';
+        if (p.isHot) statusColor = 'yellowBright';
+        else if (p.isCold) statusColor = 'cyanBright';
+        else if (p.eventAffected) statusColor = 'magentaBright';
+        else if (p.trend === 'cheap') statusColor = 'greenBright';
+        else if (p.trend === 'expensive') statusColor = 'redBright';
+
         return (
           <Box key={p.commodityId} paddingX={1}>
             <Box width={14}>
@@ -133,13 +165,11 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
             <Box width={10}>
               <Text color="yellow">${p.sellPrice}</Text>
             </Box>
-            <Box width={10}>
+            <Box width={8}>
               <Text>{owned}</Text>
             </Box>
-            <Box width={12}>
-              <Text color={p.trend === 'cheap' ? 'green' : p.trend === 'expensive' ? 'red' : 'white'}>
-                {p.trend === 'cheap' ? 'LOW' : p.trend === 'expensive' ? 'HIGH' : '-'}
-              </Text>
+            <Box width={18}>
+              <Text color={statusColor}>{statusStr || '-'}</Text>
             </Box>
           </Box>
         );
@@ -149,7 +179,7 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
 
   if (mode === 'quantity') {
     const priceInfo = prices.find((p) => p.commodityId === selectedCommodity);
-    const price = isBuying ? priceInfo?.buyPrice ?? 0 : priceInfo?.sellPrice ?? 0;
+    const price = isBuying ? (priceInfo?.buyPrice ?? 0) : (priceInfo?.sellPrice ?? 0);
     const qty = parseInt(quantity) || 0;
     const total = price * qty;
     const owned = getCargoQuantity(cargo, selectedCommodity);
@@ -189,17 +219,23 @@ export const MarketScreen: React.FC<MarketScreenProps> = ({ onBack, onMessage })
 
       {renderPriceTable()}
 
+      <Box marginBottom={1}>
+        <Text color="gray">
+          <Text color="yellowBright">HOT</Text>=+35% | <Text color="cyanBright">COLD</Text>=-30% | <Text color="magentaBright">!</Text>=event
+        </Text>
+      </Box>
+
       {mode === 'menu' && (
         <>
           <Text>Market Actions:</Text>
-          <SelectInput items={menuItems} onSelect={handleMenuSelect} />
+          <Select items={menuItems} onSelect={handleMenuSelect} />
         </>
       )}
 
       {(mode === 'buy' || mode === 'sell') && (
         <>
           <Text>{isBuying ? 'Select item to buy:' : 'Select item to sell:'}</Text>
-          <SelectInput items={commodityItems} onSelect={handleCommoditySelect} />
+          <Select items={commodityItems} onSelect={handleCommoditySelect} />
         </>
       )}
     </Box>
