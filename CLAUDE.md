@@ -27,9 +27,10 @@ User Input → Ink UI → Zustand Store → Game State → UI Re-render
 - **`src/systems/MarketSystem.ts`** - Price calculation algorithm. Prices are deterministic based on day + location + commodity using seeded random. Location modifiers (produces/needs) create arbitrage opportunities.
 
 - **`src/data/`** - Static game data:
-  - `commodities.ts` - 5 tradeable goods with base prices and min/max bounds
-  - `locations.ts` - 3 cities with connections, production, and demand
+  - `commodities.ts` - Tradeable goods with base prices and min/max bounds
+  - `locations.ts` - 3 regions with multiple cities, connections, production, and demand
   - `vehicles.ts` - 5 vehicle tiers with capacity and energy efficiency
+  - `events.ts` - Market events (weather, economic) with price effects and durations
 
 - **`src/ui/`** - Ink React components:
   - `App.tsx` - Root component handling screen routing (menu → game → game over)
@@ -42,6 +43,8 @@ User Input → Ink UI → Zustand Store → Game State → UI Re-render
 - Prices vary by location (cheap where produced, expensive where needed)
 - Weekly price cycles and daily variance for learnable patterns
 - Vehicle upgrades increase cargo capacity and energy efficiency
+- **Region unlocking** - 3 regions (starter free, coastal $5k, farming $3k) gate access to locations and commodities
+- **Weather/market events** - Random events (25% daily chance) affect commodity prices for several days. Events can be global, regional, or location-specific.
 
 ### TypeScript Notes
 

@@ -22,23 +22,31 @@ You start with **$100** and a **bicycle** in Metro City. Your goal: make as much
 4. **Upgrade** your vehicle to carry more cargo
 5. **Repeat**
 
-### Cities & Markets
+### Regions
 
-| City | Produces (Cheap) | Needs (Expensive) |
-|------|------------------|-------------------|
-| Metro City | Electronics | Produce, Fuel |
-| Port Town | Coffee, Textiles | Electronics |
-| Industrial Zone | Fuel | Coffee, Textiles |
+You start with access to **Central Hub** only. Unlock new regions to access more cities and commodities.
+
+| Region | Unlock Cost | Locations |
+|--------|-------------|-----------|
+| Central Hub | Free | Metro City, Port Town, Industrial Zone, Crossroads |
+| Coastal Territories | $5,000 | Grand Harbor, Lighthouse Bay, Docks |
+| Agricultural Heartland | $3,000 | Farmtown, Orchard Valley, Dusty Ranch |
+
+Each region has unique commodities and trade opportunities.
+
+### Market Events
+
+Random events affect prices throughout the game:
+
+- **Global events** - Fuel shortages, trade booms, market crashes affect all regions
+- **Regional events** - Bumper harvests, droughts, fishing seasons affect specific regions
+- **Local events** - Harbor storms, tech expos affect individual cities
+
+Watch the **Recent News** section for active events. Events last several days and can dramatically shift prices - use them to your advantage.
 
 ### Commodities
 
-- **Coffee** - Base price $40
-- **Electronics** - Base price $150
-- **Textiles** - Base price $30
-- **Fuel** - Base price $60
-- **Produce** - Base price $20
-
-Prices fluctuate daily. Learn the patterns to maximize profits.
+Prices fluctuate daily based on location, events, and market conditions. Buy where goods are produced (cheap) and sell where they're needed (expensive).
 
 ### Vehicles
 
@@ -86,6 +94,9 @@ Final Score = Cash + Cargo Value + Vehicle Value (50% of cost)
 - Watch for price patterns - some commodities have weekly cycles
 - Upgrade to a truck early to increase your earning potential
 - Don't waste energy traveling with empty cargo
+- Unlock Agricultural Heartland ($3k) first for cheaper expansion
+- Watch for events - a drought can double produce prices overnight
+- `[EVENT]` markers in the market show affected commodities
 
 ## Development
 
