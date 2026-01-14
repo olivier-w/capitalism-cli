@@ -1,0 +1,30 @@
+{
+  "name": "capitalism-cli",
+  "version": "1.0.0",
+  "description": "CLI trading game - buy low, sell high, build an empire",
+  "module": "src/index.tsx",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.tsx",
+    "dev": "bun --watch run src/index.tsx"
+  },
+  "bin": {
+    "capitalism": "./src/index.tsx"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.8"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "ink": "^6.6.0",
+    "ink-select-input": "^6.2.0",
+    "react": "^19.2.3",
+    "zustand": "^5.0.10"
+  }
+}
