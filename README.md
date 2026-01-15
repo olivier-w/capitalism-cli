@@ -1,5 +1,9 @@
 # Capitalism CLI
 <img width="527" height="466" alt="image" src="https://github.com/user-attachments/assets/c4eb295f-a9eb-430d-9171-df8c76c06b15" />
+<img width="663" height="559" alt="Screenshot 2026-01-14 212323" src="https://github.com/user-attachments/assets/7e874cc1-27e6-4de4-9ddc-fff0e9cf4825" />
+<img width="661" height="633" alt="Screenshot 2026-01-14 212409" src="https://github.com/user-attachments/assets/37429fe4-7f9b-4e2a-8a00-0828a94a7faf" />
+<img width="671" height="663" alt="Screenshot 2026-01-14 220555" src="https://github.com/user-attachments/assets/3c55f51a-3bbe-48d6-9987-365c2ba366ea" />
+
 
 ## Quick Start
 
