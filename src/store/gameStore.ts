@@ -10,8 +10,15 @@ import {
   INITIAL_STATE,
   getTotalCargoUnits,
 } from '../game/GameState.ts';
-import { getVehicle } from '../data/vehicles.ts';
+import { getVehicle, getVehicleTier, canVehicleTravelTo } from '../data/vehicles.ts';
 import { getLocation, getRegion, type RegionId } from '../data/locations.ts';
+import {
+  getPart,
+  getCapacityBonus,
+  getEfficiencyMultiplier,
+  canEquipPart,
+  MAX_EQUIPPED_PARTS,
+} from '../data/parts.ts';
 import { getBuyPrice, getSellPrice, type MarketContext } from '../systems/MarketSystem.ts';
 import { addSaturation, decaySaturation } from '../systems/MarketSaturation.ts';
 import { generateWeeklyStatus } from '../systems/HotColdSystem.ts';
@@ -44,6 +51,11 @@ interface GameActions {
 
   // Vehicle
   buyVehicle: (vehicleId: string) => { success: boolean; message: string };
+
+  // Parts system
+  buyPart: (partId: string) => { success: boolean; message: string };
+  equipPart: (partId: string) => { success: boolean; message: string };
+  unequipPart: (partId: string) => { success: boolean; message: string };
 
   // Region system
   unlockRegion: (regionId: RegionId) => { success: boolean; message: string };
@@ -144,6 +156,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       location: state.location,
       vehicle: state.vehicle,
       cargo: state.cargo,
+      ownedParts: state.ownedParts,
+      equippedParts: state.equippedParts,
       totalProfit: state.totalProfit,
       tradesCompleted: state.tradesCompleted,
       gameStarted: state.gameStarted,
@@ -313,6 +327,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       return { success: false, message: 'No route to that location' };
     }
 
+    // Check if vehicle can travel to this location (train restrictions)
+    if (!canVehicleTravelTo(state.vehicle, destinationId)) {
+      return { success: false, message: 'Your Freight Train can only travel to major hubs!' };
+    }
+
     // Check if region is unlocked
     if (!state.unlockedRegions.includes(destination.region)) {
       const region = getRegion(destination.region);
@@ -438,6 +457,88 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     return { success: true, message: `Purchased ${vehicle.name}!` };
   },
 
+  buyPart: (partId: string) => {
+    const state = get();
+    const part = getPart(partId);
+
+    if (!part) {
+      return { success: false, message: 'Invalid part' };
+    }
+
+    if (state.ownedParts.includes(partId)) {
+      return { success: false, message: 'Already own this part' };
+    }
+
+    if (part.cost > state.money) {
+      return { success: false, message: 'Not enough money' };
+    }
+
+    // Check vehicle tier requirement
+    const vehicleTier = getVehicleTier(state.vehicle);
+    if (part.minTier && vehicleTier < part.minTier) {
+      return { success: false, message: `Requires a Tier ${part.minTier}+ vehicle` };
+    }
+
+    set({
+      money: state.money - part.cost,
+      ownedParts: [...state.ownedParts, partId],
+    });
+
+    return { success: true, message: `Purchased ${part.name}!` };
+  },
+
+  equipPart: (partId: string) => {
+    const state = get();
+    const part = getPart(partId);
+
+    if (!part) {
+      return { success: false, message: 'Invalid part' };
+    }
+
+    if (!state.ownedParts.includes(partId)) {
+      return { success: false, message: 'You do not own this part' };
+    }
+
+    if (state.equippedParts.includes(partId)) {
+      return { success: false, message: 'Part already equipped' };
+    }
+
+    if (state.equippedParts.length >= MAX_EQUIPPED_PARTS) {
+      return { success: false, message: `Can only equip ${MAX_EQUIPPED_PARTS} parts at a time` };
+    }
+
+    // Check vehicle tier requirement
+    const vehicleTier = getVehicleTier(state.vehicle);
+    if (!canEquipPart(partId, vehicleTier)) {
+      return { success: false, message: `Your vehicle cannot use this part` };
+    }
+
+    set({
+      equippedParts: [...state.equippedParts, partId],
+    });
+
+    return { success: true, message: `Equipped ${part.name}!` };
+  },
+
+  unequipPart: (partId: string) => {
+    const state = get();
+    const part = getPart(partId);
+
+    if (!part) {
+      return { success: false, message: 'Invalid part' };
+    }
+
+    if (!state.equippedParts.includes(partId)) {
+      return { success: false, message: 'Part is not equipped' };
+    }
+
+    set({
+      equippedParts: state.equippedParts.filter((id) => id !== partId),
+    });
+
+    return { success: true, message: `Unequipped ${part.name}` };
+  },
+
   unlockRegion: (regionId: RegionId) => {
     const state = get();
 
@@ -475,7 +576,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   getCargoCapacity: () => {
     const state = get();
     const vehicle = getVehicle(state.vehicle);
-    return vehicle?.capacity ?? 20;
+    const baseCapacity = vehicle?.capacity ?? 20;
+    const partsBonus = getCapacityBonus(state.equippedParts);
+    return baseCapacity + partsBonus;
   },
 
   getCargoUsed: () => {
@@ -487,6 +590,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const destination = getLocation(destinationId);
     const vehicle = getVehicle(state.vehicle);
     if (!destination || !vehicle) return 999;
-    return Math.round(destination.travelCost * vehicle.energyMultiplier);
+    const baseCost = destination.travelCost * vehicle.energyMultiplier;
+    const efficiencyMultiplier = getEfficiencyMultiplier(state.equippedParts);
+    return Math.round(baseCost * efficiencyMultiplier);
   },
 }));

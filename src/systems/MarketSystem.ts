@@ -5,6 +5,17 @@ import type { ActiveEvent, WeeklyStatus } from '../game/GameState.ts';
 import { getSaturationMultiplier } from './MarketSaturation.ts';
 import { getHotColdMultiplier } from './HotColdSystem.ts';
 
+// Deterministic hash function for seeded random variance
+const simpleHash = (str: string): number => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+};
+
 export interface MarketPrice {
   commodityId: string;
   name: string;
@@ -88,8 +99,10 @@ export const calculatePrice = (
   // 4. Market saturation effect
   price *= getSaturationMultiplier(context.marketSaturation, location.id, commodity.id);
 
-  // 5. Daily variance - TRUE RANDOM (not seeded!)
-  const variance = (Math.random() - 0.5) * 0.2; // -10% to +10%
+  // 5. Daily variance - seeded by day/location/commodity for consistency
+  const seed = `${context.day}-${location.id}-${commodity.id}`;
+  const hash = simpleHash(seed);
+  const variance = ((hash % 1000) / 1000 - 0.5) * 0.2; // -10% to +10%
   price *= 1 + variance;
 
   // Clamp to min/max

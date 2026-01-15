@@ -5,6 +5,7 @@ import { getLocation, getRegion } from '../../data/locations.ts';
 import { getVehicle } from '../../data/vehicles.ts';
 import { getCommodity } from '../../data/commodities.ts';
 import { getEvent } from '../../data/events.ts';
+import { InlineBar } from './ProgressBar.tsx';
 
 export const Header: React.FC = () => {
   const {
@@ -27,8 +28,6 @@ export const Header: React.FC = () => {
   const cargoUsed = getCargoUsed();
   const cargoCapacity = getCargoCapacity();
 
-  const energyColor = energy > 50 ? 'green' : energy > 20 ? 'yellow' : 'red';
-
   // Get hot/cold commodity names
   const hotCommodity = weeklyStatus.hotCommodity
     ? getCommodity(weeklyStatus.hotCommodity)
@@ -39,59 +38,71 @@ export const Header: React.FC = () => {
 
   return (
     <Box flexDirection="column" borderStyle="round" paddingX={1} marginBottom={1}>
-      {/* Row 1: Money, Day, Energy */}
+      {/* Row 1: Money, Day progress, Energy bar */}
       <Box justifyContent="space-between" width="100%">
-        <Text>
+        <Box>
           <Text color="yellow" bold>
             ${money.toLocaleString()}
           </Text>
-        </Text>
-        <Text>
-          Day <Text color="cyan">{day}</Text>/{maxDays}
-        </Text>
-        <Text>
-          Energy:{' '}
-          <Text color={energyColor}>
-            {energy}/{maxEnergy}
-          </Text>
-        </Text>
+        </Box>
+        <Box>
+          <Text color="dim">Day </Text>
+          <InlineBar value={day} max={maxDays} width={12} thresholds={{ low: 0.8, high: 0.6 }} />
+          <Text color="cyan"> {day}</Text>
+          <Text color="dim">/{maxDays}</Text>
+        </Box>
+        <Box>
+          <Text>Energy </Text>
+          <InlineBar value={energy} max={maxEnergy} width={8} thresholds={{ low: 0.2, high: 0.5 }} />
+          <Text> {energy}</Text>
+        </Box>
       </Box>
 
-      {/* Row 2: Location, Cargo, Vehicle */}
+      {/* Row 2: Location, Cargo bar, Vehicle */}
       <Box justifyContent="space-between" width="100%">
-        <Text>
+        <Box>
           <Text color="cyanBright">{locationData?.name ?? 'Unknown'}</Text>
           <Text color="dim"> ({regionData?.name ?? 'Unknown'})</Text>
-        </Text>
-        <Text>
-          Cargo: {cargoUsed}/{cargoCapacity}
-        </Text>
-        <Text color="dim">{vehicleData?.name ?? 'Bicycle'}</Text>
+        </Box>
+        <Box>
+          <Text>Cargo </Text>
+          <InlineBar
+            value={cargoUsed}
+            max={cargoCapacity}
+            width={8}
+            thresholds={{ low: 0, high: 0.7 }}
+          />
+          <Text>
+            {' '}
+            {cargoUsed}/{cargoCapacity}
+          </Text>
+        </Box>
+        <Text color="dim">[{vehicleData?.name ?? 'Bicycle'}]</Text>
       </Box>
 
-      {/* Row 3: Hot/Cold commodities */}
+      {/* Row 3: Hot/Cold commodities with visual indicators */}
       {(hotCommodity || coldCommodity) && (
         <Box justifyContent="flex-start" width="100%" gap={2}>
           {hotCommodity && (
             <Text>
               <Text color="yellowBright" bold>
-                HOT:
+                [HOT]
               </Text>{' '}
-              <Text color="yellowBright">{hotCommodity.name}</Text>
+              <Text color="yellowBright">{hotCommodity.name} +35%</Text>
             </Text>
           )}
           {coldCommodity && (
             <Text>
-              <Text color="white" bold>
-                COLD:
+              <Text color="gray" bold>
+                [COLD]
               </Text>{' '}
-              <Text color="gray">{coldCommodity.name}</Text>
+              <Text color="gray">{coldCommodity.name} -30%</Text>
             </Text>
           )}
         </Box>
       )}
 
-      {/* Row 4: Active events */}
+      {/* Row 4: Active events with visual emphasis */}
       {activeEvents.length > 0 && (
         <Box flexDirection="column" width="100%">
           {activeEvents.slice(0, 2).map((active) => {
@@ -99,13 +110,17 @@ export const Header: React.FC = () => {
             if (!event) return null;
             const daysLeft = active.endDay - day + 1;
             return (
-              <Text key={active.eventId} color="magentaBright">
-                ! {event.name} ({daysLeft}d left)
+              <Text key={active.eventId}>
+                <Text color="magentaBright" bold>
+                  [!]
+                </Text>
+                <Text color="magentaBright"> {event.name}</Text>
+                <Text color="dim"> ({daysLeft}d)</Text>
               </Text>
             );
           })}
           {activeEvents.length > 2 && (
-            <Text color="gray">+{activeEvents.length - 2} more events</Text>
+            <Text color="gray">    +{activeEvents.length - 2} more events...</Text>
           )}
         </Box>
       )}

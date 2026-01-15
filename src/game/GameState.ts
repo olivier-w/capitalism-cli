@@ -38,6 +38,10 @@ export interface GameState {
   vehicle: string;
   cargo: CargoItem[];
 
+  // Vehicle parts system
+  ownedParts: string[]; // All purchased part IDs
+  equippedParts: string[]; // Currently active parts (max 3)
+
   // Tracking
   totalProfit: number;
   tradesCompleted: number;
@@ -65,6 +69,10 @@ export const INITIAL_STATE: GameState = {
   location: 'metro',
   vehicle: 'bicycle',
   cargo: [],
+
+  // Parts start empty
+  ownedParts: [],
+  equippedParts: [],
 
   totalProfit: 0,
   tradesCompleted: 0,
